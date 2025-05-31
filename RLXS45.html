@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đơn hàng của tôi</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f7f7f7; padding: 20px; }
+        .order-form, .thank-you-box {
+            max-width: 700px; margin: auto; background: #fff; padding: 20px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center;
+        }
+        h2 { text-align: center; }
+        label { display: block; margin-top: 10px; text-align: left; }
+        input, textarea { width: 100%; padding: 8px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: #f0f0f0; }
+        .total, .discount, .gift { text-align: right; font-weight: bold; margin-top: 10px; }
+        button { margin-top: 10px; padding: 14px; width: 100%; background: #4CAF50; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 22px; }
+        button:hover { background: #45a049; }
+        .voucher-section { margin-top: 20px; }
+        .thank-you-box { display: none; font-size: 18px; }
+        .thank-you-box h3 { color: #4CAF50; font-size: 24px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="order-form" id="orderForm">
+    <h2>Đơn Hàng Của Tôi</h2>
+
+    <form onsubmit="return submitOrder()">
+        <label>Họ và tên:</label>
+        <input type="text" id="fullname" required>
+
+        <label>Địa chỉ nhận hàng:</label>
+        <textarea id="address" rows="2" required></textarea>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Đơn giá</th>
+                    <th>Số lượng</th>
+                    <th>Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody id="productTable">
+                <tr>
+                    <td>Đồng hồ Rolex nam Saphiere dây thép không gỉ-RLXS45</td>
+                    <td>5.950.000₫</td>
+                    <td><input type="number" min="0" value="0" onchange="updateItem('279171')"></td>
+                    <td id="itemTotal-279171">0₫</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="voucher-section">
+            <label>Mã Voucher (nếu có):</label>
+            <input type="text" id="voucherCode">
+            <button type="button" onclick="applyVoucher()">Áp dụng mã</button>
+        </div>
+
+        <div class="discount" id="discountAmount">Giảm giá: 0₫</div>
+        <div class="total" id="totalAmount">Tổng cộng: 0₫</div>
+        <div class="gift" id="giftInfo" style="display: none;">🎁 Quà tặng: </div>
+
+        <button type="submit">XÁC NHẬN ĐẶT HÀNG</button>
+    </form>
+</div>
+
+<div class="thank-you-box" id="thankYouBox">
+    <h3>Cảm ơn bạn đã đặt hàng tại Authwatch!</h3>
+    <p>Chúng tôi sẽ chuẩn bị hàng và gửi sớm tới bạn.</p>
+    <p>Bạn vui lòng theo dõi hành trình đơn hàng qua thông báo.</p>
+    <p><strong>Authwatch hân hạnh được phục vụ bạn!</strong></p>
+</div>
+
+<script>
+    const products = {
+        '279171': { name: 'Rolex Datejust Ladies 279171', price: 5950000 },
+    };
+
+    const vouchers = {
+        'FOLLOWNHA': { type: 'discount', value: 50000 },
+        'CAMONBAN': { type: 'discount', value: 2200000 },
+        'BUOICHIEUVUIVE': { type: 'discount', value: 78000 },
+        'BANLASO1': { type: 'gift', value: '(Quà tặng) Lưu voucher cho đơn hàng sau' },
+        'YEUBAN': { type: 'gift', value: '(Quà tặng) Dây da cao cấp' },
+        'SHOPONE_06': { type: 'gift', value: '(Quà tặng) Dụng cụ cắt mắt mắt' },
+    };
+
+    let cart = { '279171': 0 };
+    let appliedDiscount = 0;
+    let appliedGift = '';
+
+    function updateItem(id) {
+        const quantity = parseInt(document.querySelector(`input[onchange="updateItem('${id}')"]`).value) || 0;
+        cart[id] = quantity;
+        updateCartDisplay();
+    }
+
+    function applyVoucher() {
+        const code = document.getElementById('voucherCode').value.trim().toUpperCase();
+        if (vouchers[code]) {
+            const voucher = vouchers[code];
+            if (voucher.type === 'discount') {
+                appliedDiscount = voucher.value;
+                appliedGift = '';
+                alert(`Áp dụng mã thành công! Giảm ${formatCurrency(appliedDiscount)}`);
+            } else if (voucher.type === 'gift') {
+                appliedGift = voucher.value;
+                appliedDiscount = 0;
+                alert(`Áp dụng mã thành công! Nhận ${appliedGift}`);
+            }
+        } else {
+            appliedDiscount = 0;
+            appliedGift = '';
+            alert('Mã voucher không hợp lệ.');
+        }
+        updateCartDisplay();
+    }
+
+    function updateCartDisplay() {
+        let total = 0;
+        for (let id in cart) {
+            const itemTotal = products[id].price * cart[id];
+            document.getElementById(`itemTotal-${id}`).innerText = formatCurrency(itemTotal);
+            total += itemTotal;
+        }
+
+        const finalTotal = Math.max(total - appliedDiscount, 0);
+        document.getElementById('discountAmount').innerText = `Giảm giá: ${formatCurrency(appliedDiscount)}`;
+        document.getElementById('totalAmount').innerText = `Tổng cộng: ${formatCurrency(finalTotal)}`;
+
+        const giftDiv = document.getElementById('giftInfo');
+        if (appliedGift) {
+            giftDiv.style.display = 'block';
+            giftDiv.innerText = `🎁 Quà tặng: ${appliedGift}`;
+        } else {
+            giftDiv.style.display = 'none';
+        }
+    }
+
+    function formatCurrency(amount) {
+        return amount.toLocaleString('vi-VN') + '₫';
+    }
+
+    function submitOrder() {
+        const name = document.getElementById('fullname').value.trim();
+        const address = document.getElementById('address').value.trim();
+        if (!name || !address) {
+            alert('Vui lòng nhập đầy đủ họ tên và địa chỉ.');
+            return false;
+        }
+        const totalQuantity = Object.values(cart).reduce((a, b) => a + b, 0);
+        if (totalQuantity === 0) {
+            alert('Vui lòng chọn ít nhất một sản phẩm.');
+            return false;
+        }
+
+        // Ẩn form, hiện box cảm ơn
+        document.getElementById('orderForm').style.display = 'none';
+        document.getElementById('thankYouBox').style.display = 'block';
+
+        return false; // chặn gửi form thực tế (demo)
+    }
+</script>
+
+</body>
+</html>
